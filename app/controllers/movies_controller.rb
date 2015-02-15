@@ -8,16 +8,42 @@ class MoviesController < ApplicationController
 
   def index
     sort_by = params[:sort_by]
-    if sort_by == 'title'
-      @movies = Movie.order(:title) 
-      @hilite = 'title'
-    elsif sort_by == 'release_date'
-      @movies = Movie.order(:release_date)
-      @hilite = 'release_date'
+    filter_ratings = params[:ratings]
+    @all_ratings = Movie.get_all_ratings
+
+    if filter_ratings == nil
+      if session[:r] == nil
+        @r = @all_ratings
+      else
+        @r = session[:r]
+      end
     else
-      @movies = Movie.all
-      @hilite = nil
+      if filter_ratings.is_a?(Hash)
+        @r = filter_ratings.keys
+      elsif filter_ratings.is_a?(Array)
+        @r = filter_ratings
+      end
     end
+
+    if sort_by == nil 
+      @movies = Movie.where(:rating => @r)
+      if session[:sort_by] == nil
+        @hilite = nil
+      else
+        @hilite = session[:sort_by]
+        flash.keep
+        redirect_to movies_path(:sort_by => sort_by, :r => @r)
+      end
+    else
+      @hilite = sort_by
+      if sort_by == 'title'
+        @movies = Movie.order(:title).where(:rating => @r) 
+      elsif sort_by == 'release_date'
+        @movies = Movie.order(:release_date).where(:rating => @r)
+      end
+    end
+    session[:r] = @r 
+    session[:sort_by] = sort_by
   end
 
   def new
