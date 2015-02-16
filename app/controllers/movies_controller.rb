@@ -7,41 +7,43 @@ class MoviesController < ApplicationController
   end
 
   def index
-    sort_by = params[:sort_by]
-    filter_ratings = params[:ratings]
     @all_ratings = Movie.get_all_ratings
-    if filter_ratings == nil
-      if session[:r] == nil
-        @r = @all_ratings
-      else
-        @r = session[:r]
-      end
-    else
-      if filter_ratings.is_a?(Hash)
-        @r = filter_ratings.keys
-      elsif filter_ratings.is_a?(Array)
-        @r = filter_ratings
-      end
-    end
-    if sort_by == nil 
-      @movies = Movie.where(:rating => @r)
+    redirect = false
+    param_sort_by = params[:sort_by]
+    param_ratings = params[:ratings]
+
+    if param_sort_by == nil
       if session[:sort_by] == nil
         @hilite = nil
+        redirect = false
       else
-        sort_by = session[:sort_by]
-        flash.keep
-        redirect_to movies_path(:sort_by => sort_by, :r => @r)
+        @hilite = session[:sort_by]
       end
     else
-      @hilite = sort_by
-      if sort_by == 'title'
-        @movies = Movie.order(:title).where(:rating => @r) 
-      elsif sort_by == 'release_date'
-        @movies = Movie.order(:release_date).where(:rating => @r)
-      end
+      @hilite = params[:sort_by]
     end
-    session[:r] = @r 
-    session[:sort_by] = sort_by
+
+    if param_ratings == nil
+      if session[:ratings] == nil 
+        @r = @all_ratings
+        redirect = false
+      else
+        @r = session[:ratings]
+        redirect = true
+      end
+    else
+      @r = (param_ratings.is_a?(Hash)) ? param_ratings.keys : param_ratings
+    end
+
+    session[:ratings] = @r 
+    session[:sort_by] = @hilite
+
+    if redirect
+      flash.keep
+      redirect_to movies_path(:sort_by => @hilite, :ratings => @r)
+    else
+      @movies = (@hilite==nil) ? Movie.where(:rating => @r) : Movie.order(@hilite.to_sym).where(:rating => @r)
+    end
   end
 
   def new
